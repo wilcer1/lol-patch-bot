@@ -1,0 +1,46 @@
+name: LoL Patch Notes Summary
+
+on:
+  schedule:
+    # Runs every day at 15:00 UTC. Patches land every ~2 weeks, but running
+    # daily and checking "already posted?" means you never miss one and
+    # don't need to know the exact release date.
+    - cron: "0 15 * * *"
+  workflow_dispatch: {}  # lets you trigger it manually from the Actions tab
+
+permissions:
+  contents: write  # needed so the workflow can commit the "already posted" tracker file
+
+jobs:
+  summarize-and-post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run patch notes bot
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          OPENROUTER_MODEL: ${{ secrets.OPENROUTER_MODEL }}  # optional secret, falls back to script default if unset
+        run: python patch_summary_bot.py
+
+      - name: Commit updated "last posted" tracker
+        run: |
+          git config user.name "patch-notes-bot"
+          git config user.email "actions@github.com"
+          if git diff --quiet last_patch_url.txt 2>/dev/null; then
+            echo "No change to tracker file, skipping commit."
+          else
+            git add last_patch_url.txt
+            git commit -m "Update last posted patch notes URL"
+            git push
+          fi
