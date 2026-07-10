@@ -151,8 +151,8 @@ def summarize_with_openrouter(patch_text: str) -> str:
             effect (buff/nerf/rework and how it changes how they play
             or how the augment/item is used)
         - Arena changes get exactly the same depth and structure as
-          Rift changes — do not summarize Arena more loosely just
-          because it's second. New Arena augments/champions/items get
+          Rift changes, but it also has some specific subsections, like Guests of Honor — do not summarize Arena more loosely just
+          because it's second. New Arena augments/champions/items/Guests of Honor get
           a one-line description plus their numbers, same as any change.
         - Bugfixes and pure text/UI changes can be summarized briefly
           without numbers unless the bug itself involved specific values
