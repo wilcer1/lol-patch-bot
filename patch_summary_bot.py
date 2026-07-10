@@ -129,20 +129,33 @@ def summarize_with_openrouter(patch_text: str) -> str:
 
     prompt = textwrap.dedent(f"""
         Summarize the following League of Legends patch notes for a
-        Discord channel of casual-to-mid ranked players. Requirements:
+        Discord channel of casual-to-mid ranked players who want the
+        real numbers, not a vibes-based recap. Requirements:
 
         - Use Discord markdown (bold with **, bullet points with -)
-        - Organize by section: Champions, Items, System changes, ARAM/other
-          (skip any section that has no changes)
-        - For champion changes, briefly say whether it's a buff, nerf, or
-          rework, and the practical effect on how they play
-        - Keep it under 1500 characters total
-        - Skip pure numeric bookkeeping unless it changes how a champion
-          or item feels to play
+        - Organize into these sections, in this order, skipping any
+          section with no changes: Champions (Summoner's Rift), Items,
+          System changes, Arena
+        - Completely skip ARAM/ARAM: Mayhem changes — do not mention them
+          even in passing
+        - For every Summoner's Rift champion and item change, give the
+          exact old value -> new value for every stat that changed
+          (e.g. "Base AD: 60 -> 64", "Cooldown: 14/12/10/8/6 -> 12/10/8/6/4").
+          Do not round, paraphrase, or drop numbers to save space.
+        - After the numbers for each champion/item, add one short line
+          on the practical effect (buff/nerf/rework and how it changes
+          how they play)
+        - Arena changes should be just as detailed and numeric as Rift —
+          list augment/item/system changes with exact old -> new values
+        - Bugfixes and pure text/UI changes can be summarized briefly
+          without numbers unless the bug itself involved specific values
         - No preamble like "Here's a summary" — just the content
+        - No arbitrary length cap — include everything qualifying above,
+          even if the message ends up long. Do not compress or omit
+          champions/items to hit a shorter length.
 
         Patch notes:
-        {patch_text[:12000]}
+        {patch_text[:30000]}
     """).strip()
 
     resp = requests.post(
@@ -154,8 +167,9 @@ def summarize_with_openrouter(patch_text: str) -> str:
         json={
             "model": OPENROUTER_MODEL,
             "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 4000,
         },
-        timeout=60,
+        timeout=120,
     )
     resp.raise_for_status()
     data = resp.json()
