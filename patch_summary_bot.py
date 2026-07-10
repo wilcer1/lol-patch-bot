@@ -136,6 +136,7 @@ def summarize_with_openrouter(patch_text: str) -> str:
         - Organize into these sections, in this order, skipping any
           section with no changes: Champions (Summoner's Rift), Items,
           System changes, Arena
+        - For Arena, organize it into sections, e.g. Augments, Items, Systems, etc.
         - Completely skip ARAM/ARAM: Mayhem changes — do not mention them
           even in passing
         - For every Summoner's Rift champion and item change, give the
