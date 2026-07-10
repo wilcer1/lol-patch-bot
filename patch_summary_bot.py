@@ -130,40 +130,51 @@ def summarize_with_openrouter(patch_text: str) -> str:
     prompt = textwrap.dedent(f"""
         Summarize the following League of Legends patch notes for a
         Discord channel of casual-to-mid ranked players who want the
-        real numbers, not a vibes-based recap. Requirements:
+        real numbers, not a vibes-based recap.
  
-        - Use Discord markdown (bold with **, bullet points with -)
-        - Organize into these top-level sections, in this order, skipping
-          any section (or subsection) with no changes:
-          **Summoner's Rift** (with subsections **Champions** and **Items**),
-          **System changes**,
-          **Arena** (with subsections **Champions**, **Augments**, and **Items**)
-        - Completely skip ARAM/ARAM: Mayhem changes — do not mention them
-          even in passing
-        - Champions, Augments, and Items sections (in both Rift and
-          Arena) follow the exact same per-entry format:
-          - Bold the champion/augment/item name as its own line
-          - Give the exact old value -> new value for every stat that
-            changed (e.g. "Base AD: 60 -> 64",
-            "Cooldown: 14/12/10/8/6 -> 12/10/8/6/4"). Do not round,
-            paraphrase, or drop numbers to save space.
-          - After the numbers, add one short line on the practical
-            effect (buff/nerf/rework and how it changes how they play
-            or how the augment/item is used)
-        - Arena changes get exactly the same depth and structure as
-          Rift changes, but it also has some specific subsections, like Guests of Honor — do not summarize Arena more loosely just
-          because it's second. New Arena augments/champions/items/Guests of Honor get
-          a one-line description plus their numbers, same as any change.
-        - Bugfixes and pure text/UI changes can be summarized briefly
-          without numbers unless the bug itself involved specific values
+        The patch notes below have their heading levels marked: lines
+        starting with "# " are top-level sections (e.g. Champions,
+        Arena, System), "## " are subsections within them (e.g.
+        Guests of Honor, Augments, Items), and "### " are a level
+        below that. Bullet points start with "- ".
+ 
+        Requirements:
+ 
+        - Mirror the source's own section and subsection structure and
+          order. Do not invent a different taxonomy or force sections
+          into a fixed list — if Arena has "Guests of Honor" and
+          "Augments" as separate subsections in the source, keep them
+          as separate subsections in your output, in that order,
+          alongside any other subsections the source actually has.
+        - Use Discord markdown headers that match the source's
+          hierarchy (**bold** for top-level sections, normal bold text
+          for subsections works well — Discord doesn't render #/##).
+        - Completely skip ARAM/ARAM: Mayhem sections and any bullet
+          points under them — do not mention them even in passing,
+          even if the source nests them under a section you're
+          otherwise keeping.
+        - Within every subsection, for each champion/augment/item/system
+          that changed: bold its name on its own line, then give the
+          exact old value -> new value for every stat that changed
+          (e.g. "Base AD: 60 -> 64", "Cooldown: 14/12/10/8/6 -> 12/10/8/6/4").
+          Do not round, paraphrase, or drop numbers to save space.
+        - After the numbers, add one short line on the practical effect
+          (buff/nerf/rework/new addition and how it changes how it's
+          played or used)
+        - Give every section this same numeric depth — don't write Rift
+          in full detail and Arena more loosely, or vice versa, just
+          because one appears first
+        - Bugfixes and pure text/UI changes can stay brief without
+          numbers unless the bug itself involved specific values
         - No preamble like "Here's a summary" — just the content
         - No arbitrary length cap — include everything qualifying above,
           even if the message ends up long. Do not compress or omit
-          champions/items to hit a shorter length.
+          entries to hit a shorter length.
  
         Patch notes:
         {patch_text[:30000]}
     """).strip()
+
 
 
     resp = requests.post(
