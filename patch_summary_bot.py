@@ -25,6 +25,42 @@ DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "anthropic/claude-3.5-haiku")
 
 DISCORD_MSG_LIMIT = 2000  # Discord hard limit per message
+PATCH_NOTES_INDEX = "https://www.leagueoflegends.com/en-us/news/tags/patch-notes/"
+SEEN_FILE = "last_patch_url.txt"  # tracks the last patch we already posted
+
+
+def find_latest_patch_url() -> str:
+    """Scrape the patch notes tag/index page and return the newest
+    patch notes article URL."""
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; PatchBot/1.0)"}
+    resp = requests.get(PATCH_NOTES_INDEX, headers=headers, timeout=20)
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    for a in soup.find_all("a", href=True):
+        href = a["href"]
+        if "/news/game-updates/patch-" in href and href.endswith("-notes/"):
+            if href.startswith("http"):
+                return href
+            return f"https://www.leagueoflegends.com{href}"
+
+    raise RuntimeError(
+        "Couldn't find a patch notes link on the index page. Riot may "
+        "have changed the page layout — open the index URL and check "
+        "the href pattern this function is matching against."
+    )
+
+
+def already_posted(url: str) -> bool:
+    if not os.path.exists(SEEN_FILE):
+        return False
+    with open(SEEN_FILE) as f:
+        return f.read().strip() == url.strip()
+
+
+def mark_posted(url: str):
+    with open(SEEN_FILE, "w") as f:
+        f.write(url.strip())
 
 
 def fetch_patch_notes_text(url: str) -> str:
@@ -132,18 +168,34 @@ def send_to_discord(content: str, source_url: str = None):
 
 def main():
     parser = argparse.ArgumentParser(description="Summarize LoL patch notes to Discord")
-    parser.add_argument("--url", required=True, help="URL of the patch notes page")
+    parser.add_argument(
+        "--url",
+        help="URL of a specific patch notes page. If omitted, auto-detects "
+             "the latest one from Riot's patch notes index.",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Post even if this URL was already posted before (skips the dedup check).",
+    )
     args = parser.parse_args()
 
-    print(f"Fetching {args.url} ...")
-    patch_text = fetch_patch_notes_text(args.url)
+    url = args.url or find_latest_patch_url()
+    print(f"Using patch notes URL: {url}")
+
+    if not args.force and already_posted(url):
+        print("Already posted this patch — nothing to do.")
+        return
+
+    patch_text = fetch_patch_notes_text(url)
 
     print(f"Got {len(patch_text)} characters. Summarizing with {OPENROUTER_MODEL} ...")
     summary = summarize_with_openrouter(patch_text)
 
     print("Posting to Discord ...")
-    send_to_discord(summary, source_url=args.url)
+    send_to_discord(summary, source_url=url)
 
+    mark_posted(url)
     print("Done.")
 
 
