@@ -131,33 +131,40 @@ def summarize_with_openrouter(patch_text: str) -> str:
         Summarize the following League of Legends patch notes for a
         Discord channel of casual-to-mid ranked players who want the
         real numbers, not a vibes-based recap. Requirements:
-
+ 
         - Use Discord markdown (bold with **, bullet points with -)
-        - Organize into these sections, in this order, skipping any
-          section with no changes: Champions (Summoner's Rift), Items,
-          System changes, Arena
-        - For Arena, organize it into sections, e.g. Augments, Items, Systems, etc.
+        - Organize into these top-level sections, in this order, skipping
+          any section (or subsection) with no changes:
+          **Summoner's Rift** (with subsections **Champions** and **Items**),
+          **System changes**,
+          **Arena** (with subsections **Champions**, **Augments**, and **Items**)
         - Completely skip ARAM/ARAM: Mayhem changes — do not mention them
           even in passing
-        - For every Summoner's Rift champion and item change, give the
-          exact old value -> new value for every stat that changed
-          (e.g. "Base AD: 60 -> 64", "Cooldown: 14/12/10/8/6 -> 12/10/8/6/4").
-          Do not round, paraphrase, or drop numbers to save space.
-        - After the numbers for each champion/item, add one short line
-          on the practical effect (buff/nerf/rework and how it changes
-          how they play)
-        - Arena changes should be just as detailed and numeric as Rift —
-          list augment/item/system changes with exact old -> new values
+        - Champions, Augments, and Items sections (in both Rift and
+          Arena) follow the exact same per-entry format:
+          - Bold the champion/augment/item name as its own line
+          - Give the exact old value -> new value for every stat that
+            changed (e.g. "Base AD: 60 -> 64",
+            "Cooldown: 14/12/10/8/6 -> 12/10/8/6/4"). Do not round,
+            paraphrase, or drop numbers to save space.
+          - After the numbers, add one short line on the practical
+            effect (buff/nerf/rework and how it changes how they play
+            or how the augment/item is used)
+        - Arena changes get exactly the same depth and structure as
+          Rift changes — do not summarize Arena more loosely just
+          because it's second. New Arena augments/champions/items get
+          a one-line description plus their numbers, same as any change.
         - Bugfixes and pure text/UI changes can be summarized briefly
           without numbers unless the bug itself involved specific values
         - No preamble like "Here's a summary" — just the content
         - No arbitrary length cap — include everything qualifying above,
           even if the message ends up long. Do not compress or omit
           champions/items to hit a shorter length.
-
+ 
         Patch notes:
         {patch_text[:30000]}
     """).strip()
+
 
     resp = requests.post(
         "https://openrouter.ai/api/v1/chat/completions",
