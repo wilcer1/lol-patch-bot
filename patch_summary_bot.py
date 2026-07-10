@@ -14,6 +14,7 @@ Install deps:
 """
 
 import os
+import re
 import sys
 import argparse
 import textwrap
@@ -29,26 +30,45 @@ PATCH_NOTES_INDEX = "https://www.leagueoflegends.com/en-us/news/tags/patch-notes
 SEEN_FILE = "last_patch_url.txt"  # tracks the last patch we already posted
 
 
+PATCH_LINK_RE = re.compile(r"/news/game-updates/[a-z0-9-]*patch-(\d+)-(\d+)-notes/?$")
+
+
 def find_latest_patch_url() -> str:
-    """Scrape the patch notes tag/index page and return the newest
-    patch notes article URL."""
+    """Scrape the patch notes tag/index page and return the article URL
+    with the highest patch number (e.g. 26.8 beats 26.7).
+
+    Riot is inconsistent about whether the link includes a
+    "league-of-legends-" prefix (e.g. "league-of-legends-patch-26-8-notes"
+    vs just "patch-26-3-notes") and links have no trailing slash, so the
+    regex tolerates both. Picking the highest patch number is more
+    reliable than assuming the first link on the page is newest.
+    """
     headers = {"User-Agent": "Mozilla/5.0 (compatible; PatchBot/1.0)"}
     resp = requests.get(PATCH_NOTES_INDEX, headers=headers, timeout=20)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
 
+    best_url = None
+    best_version = (-1, -1)
+
     for a in soup.find_all("a", href=True):
         href = a["href"]
-        if "/news/game-updates/patch-" in href and href.endswith("-notes/"):
-            if href.startswith("http"):
-                return href
-            return f"https://www.leagueoflegends.com{href}"
+        match = PATCH_LINK_RE.search(href)
+        if not match:
+            continue
+        version = (int(match.group(1)), int(match.group(2)))
+        if version > best_version:
+            best_version = version
+            best_url = href if href.startswith("http") else f"https://www.leagueoflegends.com{href}"
 
-    raise RuntimeError(
-        "Couldn't find a patch notes link on the index page. Riot may "
-        "have changed the page layout — open the index URL and check "
-        "the href pattern this function is matching against."
-    )
+    if best_url is None:
+        raise RuntimeError(
+            "Couldn't find any patch notes link on the index page. Riot "
+            "may have changed the page layout — open the index URL and "
+            "check the href pattern PATCH_LINK_RE is matching against."
+        )
+
+    return best_url
 
 
 def already_posted(url: str) -> bool:
